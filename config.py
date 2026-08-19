@@ -22,7 +22,12 @@ WS_SERVER_PORT = 8000
 # this stays loopback regardless of the bind host above.
 WS_SERVER_LOCAL_HOST = "127.0.0.1"
 
+# find_adb() checks PATH and ADB_ENV_VARS first (both already
+# cross-platform); these are just last-resort fallbacks for the common
+# default install locations per OS when neither of those is set.
 ADB_ENV_VARS = ("ANDROID_SDK_ROOT", "ANDROID_HOME")
 ADB_FALLBACK_PATHS = (
     Path(os.path.expandvars(r"%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe")),
+    Path.home() / "Android" / "Sdk" / "platform-tools" / "adb",
+    Path.home() / "Library" / "Android" / "sdk" / "platform-tools" / "adb",
 )

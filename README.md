@@ -9,6 +9,44 @@ than through `MediaProjectionManager`.
 Named after quantum entanglement: your PC and the phone's screen/input,
 kept in sync as if linked at a distance.
 
+Cross-platform: everything here is plain Python (`asyncio`/`aiohttp`) and
+shells out to `adb`, so the core (`ws_server.py` and everything it uses)
+runs the same on Windows, Linux, and macOS. Only `launch_window.py` (the
+optional no-console app-mode-window convenience launcher) has any
+OS-specific logic, and it already branches for all three.
+
+## Setup
+
+**Prerequisites:**
+- Python 3.10+
+- `adb` (Android SDK Platform Tools) -- either on `PATH`, or with
+  `ANDROID_SDK_ROOT`/`ANDROID_HOME` pointing at your SDK install
+  (`find_adb()` in `scrcpy_common/adb.py` checks both, plus a couple of
+  common default install locations per OS as a last resort)
+- A Chromium-based browser (Edge, Chrome, or Chromium) if you want the
+  app-mode window (`launch_window.py`) -- any browser works for the
+  plain-tab flow
+- One or more Android devices with **USB debugging enabled**
+  (Settings -> About phone -> tap Build number 7x to unlock Developer
+  options -> enable USB debugging), connected over USB (or already set up
+  for wireless `adb`) and authorized -- accept the "Allow USB debugging?"
+  prompt on the phone the first time
+
+**Install:**
+```
+git clone https://github.com/akhileshkoti/Entangle.git
+cd Entangle
+pip install -r requirements.txt
+```
+
+**Verify adb sees your device(s):**
+```
+adb devices
+```
+Each should show as `device` (not `unauthorized` or `offline`).
+
+Then jump to "Running it" below.
+
 ## Security -- read this before exposing to a network
 
 The server binds to `0.0.0.0` by default (`config.WS_SERVER_BIND_HOST`)
