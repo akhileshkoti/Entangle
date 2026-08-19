@@ -11,8 +11,8 @@ def generate_scid() -> str:
     return f"{random.randint(0, 0x7FFFFFFF):08x}"
 
 
-def push_server_jar(adb_path: str) -> None:
-    adb.push(adb_path, str(config.SCRCPY_SERVER_JAR_LOCAL), config.SCRCPY_SERVER_JAR_DEVICE)
+def push_server_jar(adb_path: str, serial: str | None = None) -> None:
+    adb.push(adb_path, str(config.SCRCPY_SERVER_JAR_LOCAL), config.SCRCPY_SERVER_JAR_DEVICE, serial=serial)
 
 
 def _format_value(value) -> str:
@@ -48,6 +48,6 @@ def build_server_command(scid: str, **opts) -> str:
     return " ".join(parts)
 
 
-def start_server(adb_path: str, scid: str, **opts) -> subprocess.Popen:
+def start_server(adb_path: str, scid: str, serial: str | None = None, **opts) -> subprocess.Popen:
     command = build_server_command(scid, **opts)
-    return adb.shell_background(adb_path, command)
+    return adb.shell_background(adb_path, command, serial=serial)

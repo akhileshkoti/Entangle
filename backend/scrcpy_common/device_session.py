@@ -11,10 +11,11 @@ class DeviceSession:
     accept order: video, audio, control, all over a single adb-forwarded
     port), and exposes the video stream + control channel."""
 
-    def __init__(self, video=True, audio=False, control=False, **server_opts):
+    def __init__(self, video=True, audio=False, control=False, serial: str | None = None, **server_opts):
         self.video = video
         self.audio = audio
         self.control = control
+        self.serial = serial
         self.server_opts = server_opts
 
         self.adb_path = adb.find_adb()
@@ -32,13 +33,17 @@ class DeviceSession:
         self._control_lock = asyncio.Lock()
 
     async def start(self):
-        adb.forward_remove_all(self.adb_path)
-        scrcpy_launcher.push_server_jar(self.adb_path)
+        # No forward_remove_all here: with multiple devices attached, that
+        # call is global across ALL of them and would tear down other
+        # devices' active forwards. Each session's own port is tracked and
+        # removed individually in stop().
+        scrcpy_launcher.push_server_jar(self.adb_path, serial=self.serial)
         self.scid = scrcpy_launcher.generate_scid()
 
         self.server_process = scrcpy_launcher.start_server(
             self.adb_path,
             self.scid,
+            serial=self.serial,
             video=self.video,
             audio=self.audio,
             control=self.control,
@@ -56,7 +61,7 @@ class DeviceSession:
         await asyncio.sleep(2.0)
 
         socket_name = f"localabstract:scrcpy_{self.scid}"
-        self._local_port = adb.forward(self.adb_path, socket_name)
+        self._local_port = adb.forward(self.adb_path, socket_name, serial=self.serial)
 
         # The server only writes the handshake (dummy byte + device name) on
         # the first-opened socket AFTER every enabled socket has been
@@ -95,7 +100,7 @@ class DeviceSession:
             line = await loop.run_in_executor(None, self.server_process.stdout.readline)
             if not line:
                 break
-            print(f"[scrcpy-server] {line.rstrip()}", file=sys.stderr)
+            print(f"[scrcpy-server {self.serial}] {line.rstrip()}", file=sys.stderr)
 
     async def _connect_socket_with_retry(self, attempts=10, delay=1.0, per_attempt_timeout=3.0):
         # `adb forward`'s local port accepts immediately regardless of
@@ -137,7 +142,7 @@ class DeviceSession:
                 writer.close()
 
         if self._local_port is not None:
-            adb.forward_remove(self.adb_path, self._local_port)
+            adb.forward_remove(self.adb_path, self._local_port, serial=self.serial)
 
         if self.server_process is not None:
             self.server_process.terminate()

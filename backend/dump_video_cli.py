@@ -18,9 +18,10 @@ async def main():
     parser.add_argument("--out", default="output.h264", help="output file (ignored with --stdout)")
     parser.add_argument("--stdout", action="store_true", help="write raw H.264 to stdout instead")
     parser.add_argument("--seconds", type=float, default=None, help="stop after N seconds (default: run until Ctrl+C)")
+    parser.add_argument("--serial", default=None, help="target device serial (required if more than one is attached)")
     args = parser.parse_args()
 
-    session = DeviceSession(video=True, audio=False, control=False)
+    session = DeviceSession(video=True, audio=False, control=False, serial=args.serial)
     await session.start()
     print(f"Connected: {session.device_name!r} codec_id=0x{session.video_codec_id:08x}", file=sys.stderr)
 

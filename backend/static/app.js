@@ -27,7 +27,10 @@ video.addEventListener('resize', updateDeviceSize);
 
 function connect() {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  ws = new WebSocket(`${proto}://${location.host}/ws`);
+  // Page is served at /d/<serial>/ -- the per-device WS endpoint is the
+  // same path with 'ws' appended.
+  const wsPath = location.pathname.endsWith('/') ? location.pathname + 'ws' : location.pathname + '/ws';
+  ws = new WebSocket(`${proto}://${location.host}${wsPath}`);
   ws.binaryType = 'arraybuffer';
 
   ws.onopen = () => {

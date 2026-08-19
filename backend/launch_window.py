@@ -52,7 +52,7 @@ def find_browser() -> str:
 
 
 def ensure_server_running() -> None:
-    if is_port_open(config.WS_SERVER_HOST, config.WS_SERVER_PORT):
+    if is_port_open(config.WS_SERVER_LOCAL_HOST, config.WS_SERVER_PORT):
         return
 
     pythonw = find_pythonw()
@@ -63,7 +63,7 @@ def ensure_server_running() -> None:
     )
 
     for _ in range(60):
-        if is_port_open(config.WS_SERVER_HOST, config.WS_SERVER_PORT):
+        if is_port_open(config.WS_SERVER_LOCAL_HOST, config.WS_SERVER_PORT):
             return
         time.sleep(0.5)
     raise TimeoutError("ws_server did not start listening within 30s")
@@ -73,7 +73,12 @@ def main() -> None:
     ensure_server_running()
     browser = find_browser()
     PROFILE_DIR.mkdir(exist_ok=True)
-    url = f"http://{config.WS_SERVER_HOST}:{config.WS_SERVER_PORT}/"
+
+    # Optional serial arg opens straight to that device's viewer; with none,
+    # opens the device list to pick from.
+    serial = sys.argv[1] if len(sys.argv) > 1 else None
+    path = f"d/{serial}/" if serial else ""
+    url = f"http://{config.WS_SERVER_LOCAL_HOST}:{config.WS_SERVER_PORT}/{path}"
     subprocess.Popen([browser, f"--app={url}", f"--user-data-dir={PROFILE_DIR}"])
 
 

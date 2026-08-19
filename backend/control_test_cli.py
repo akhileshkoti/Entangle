@@ -15,7 +15,8 @@ from scrcpy_common.protocol import SessionMeta
 
 
 async def main():
-    session = DeviceSession(video=True, audio=False, control=True)
+    serial = sys.argv[1] if len(sys.argv) > 1 else None
+    session = DeviceSession(video=True, audio=False, control=True, serial=serial)
     await session.start()
     print(f"Connected: {session.device_name!r}", file=sys.stderr)
 
@@ -39,16 +40,16 @@ async def main():
     adb_path = session.adb_path
 
     # --- Test A: INJECT_KEYCODE (HOME), verified via screencap diff ---
-    adb.run(adb_path, "shell", "am", "start", "-a", "android.settings.SETTINGS", check=False)
+    adb.run(adb_path, "shell", "am", "start", "-a", "android.settings.SETTINGS", check=False, serial=serial)
     await asyncio.sleep(2)
 
-    before_home_png = adb.exec_out(adb_path, "screencap", "-p")
+    before_home_png = adb.exec_out(adb_path, "screencap", "-p", serial=serial)
 
     await session.send_control(encode_inject_keycode(ACTION_DOWN, KEYCODE_HOME))
     await session.send_control(encode_inject_keycode(ACTION_UP, KEYCODE_HOME))
     await asyncio.sleep(1)
 
-    after_home_png = adb.exec_out(adb_path, "screencap", "-p")
+    after_home_png = adb.exec_out(adb_path, "screencap", "-p", serial=serial)
 
     keycode_ok = before_home_png != after_home_png
     print(
@@ -57,10 +58,10 @@ async def main():
     )
 
     # --- Test B: INJECT_TOUCH_EVENT (scroll drag), verified via screencap diff ---
-    adb.run(adb_path, "shell", "am", "start", "-a", "android.settings.SETTINGS", check=False)
+    adb.run(adb_path, "shell", "am", "start", "-a", "android.settings.SETTINGS", check=False, serial=serial)
     await asyncio.sleep(1.5)
 
-    before_png = adb.exec_out(adb_path, "screencap", "-p")
+    before_png = adb.exec_out(adb_path, "screencap", "-p", serial=serial)
 
     x = w // 2
     y_start = int(h * 0.8)
@@ -74,7 +75,7 @@ async def main():
     await session.send_control(encode_inject_touch(ACTION_UP, x, y_end, w, h, pressure=0.0))
     await asyncio.sleep(0.8)
 
-    after_png = adb.exec_out(adb_path, "screencap", "-p")
+    after_png = adb.exec_out(adb_path, "screencap", "-p", serial=serial)
 
     touch_ok = before_png != after_png
     print(
