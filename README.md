@@ -59,6 +59,17 @@ running this anywhere less trusted.
 
 ## Running it
 
+Defaults to port 8000; override with `ENTANGLE_PORT` if that's taken
+(common -- it's also Django's `runserver` default, Python's
+`http.server` default, etc.):
+```
+ENTANGLE_PORT=9000 python ws_server.py
+```
+(`set ENTANGLE_PORT=9000` then run, on Windows cmd; `$env:ENTANGLE_PORT=9000`
+in PowerShell.) Applies to every command below the same way, including
+`launch_window.py`, which passes its environment through to the server
+it starts.
+
 **Plain browser tab:**
 ```
 python ws_server.py

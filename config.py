@@ -15,7 +15,11 @@ DEFAULT_VIDEO_BIT_RATE = 8_000_000
 # this machine on the network can view/control any connected device --
 # there is deliberately no authentication (see README.md).
 WS_SERVER_BIND_HOST = "0.0.0.0"
-WS_SERVER_PORT = 8000
+
+# 8000 is a heavily-contested default (Django's runserver, Python's
+# http.server, plenty of other dev tooling) -- override with
+# ENTANGLE_PORT=<port> rather than editing this file.
+WS_SERVER_PORT = int(os.environ.get("ENTANGLE_PORT", 8000))
 
 # What local tools (launch_window.py, stop.py's port-check) use to talk to
 # the server -- connecting to 0.0.0.0 as a *destination* isn't portable, so
