@@ -3,12 +3,12 @@
 *.iml
 .DS_Store
 
-# Python backend
+# Python
 __pycache__/
 *.pyc
-backend/logs/
-backend/.browser-profile/
-backend/.ws_server.pid
+logs/
+.browser-profile/
+.ws_server.pid
 
 # Claude Code local session state
 .claude/

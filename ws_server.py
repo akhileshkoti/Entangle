@@ -10,11 +10,11 @@ from aiohttp import WSMsgType, web
 import config
 from device_manager import DeviceManager
 
-BACKEND_DIR = Path(__file__).resolve().parent
-STATIC_DIR = BACKEND_DIR / "static"
-LOG_DIR = BACKEND_DIR / "logs"
+ROOT_DIR = Path(__file__).resolve().parent
+STATIC_DIR = ROOT_DIR / "static"
+LOG_DIR = ROOT_DIR / "logs"
 LOG_DIR.mkdir(exist_ok=True)
-PID_FILE = BACKEND_DIR / ".ws_server.pid"
+PID_FILE = ROOT_DIR / ".ws_server.pid"
 
 logging.basicConfig(
     level=logging.INFO,

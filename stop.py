@@ -2,8 +2,8 @@ import os
 import signal
 from pathlib import Path
 
-BACKEND_DIR = Path(__file__).resolve().parent
-PID_FILE = BACKEND_DIR / ".ws_server.pid"
+ROOT_DIR = Path(__file__).resolve().parent
+PID_FILE = ROOT_DIR / ".ws_server.pid"
 
 
 def main() -> None:

@@ -7,8 +7,8 @@ from pathlib import Path
 
 import config
 
-BACKEND_DIR = Path(__file__).resolve().parent
-PROFILE_DIR = BACKEND_DIR / ".browser-profile"
+ROOT_DIR = Path(__file__).resolve().parent
+PROFILE_DIR = ROOT_DIR / ".browser-profile"
 
 BROWSER_FALLBACKS = (
     r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
@@ -57,8 +57,8 @@ def ensure_server_running() -> None:
 
     pythonw = find_pythonw()
     subprocess.Popen(
-        [pythonw, str(BACKEND_DIR / "ws_server.py")],
-        cwd=str(BACKEND_DIR),
+        [pythonw, str(ROOT_DIR / "ws_server.py")],
+        cwd=str(ROOT_DIR),
         creationflags=subprocess.CREATE_NO_WINDOW,
     )
 
