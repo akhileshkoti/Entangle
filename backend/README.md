@@ -1,10 +1,13 @@
-# Entangle backend
+# Entangle
 
 Live screen mirroring + remote control for one or more Android devices,
 using scrcpy's own on-device server component (vendored in
 `scrcpy_server/`, see `NOTICE.md`) for capture and input injection -- no
 in-app permission dialog, since it runs as the adb `shell` user rather
 than through `MediaProjectionManager`.
+
+Named after quantum entanglement: your PC and the phone's screen/input,
+kept in sync as if linked at a distance.
 
 ## Security -- read this before exposing to a network
 
