@@ -1,0 +1,25 @@
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# Python backend
+__pycache__/
+*.pyc
+backend/logs/
+backend/.browser-profile/
+backend/.ws_server.pid
+
+# Claude Code local session state
+.claude/
