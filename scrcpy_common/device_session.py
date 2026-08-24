@@ -37,10 +37,11 @@ class DeviceSession:
         # call is global across ALL of them and would tear down other
         # devices' active forwards. Each session's own port is tracked and
         # removed individually in stop().
-        scrcpy_launcher.push_server_jar(self.adb_path, serial=self.serial)
+        await asyncio.to_thread(scrcpy_launcher.push_server_jar, self.adb_path, serial=self.serial)
         self.scid = scrcpy_launcher.generate_scid()
 
-        self.server_process = scrcpy_launcher.start_server(
+        self.server_process = await asyncio.to_thread(
+            scrcpy_launcher.start_server,
             self.adb_path,
             self.scid,
             serial=self.serial,
@@ -61,7 +62,7 @@ class DeviceSession:
         await asyncio.sleep(2.0)
 
         socket_name = f"localabstract:scrcpy_{self.scid}"
-        self._local_port = adb.forward(self.adb_path, socket_name, serial=self.serial)
+        self._local_port = await asyncio.to_thread(adb.forward, self.adb_path, socket_name, serial=self.serial)
 
         # The server only writes the handshake (dummy byte + device name) on
         # the first-opened socket AFTER every enabled socket has been
@@ -142,11 +143,11 @@ class DeviceSession:
                 writer.close()
 
         if self._local_port is not None:
-            adb.forward_remove(self.adb_path, self._local_port, serial=self.serial)
+            await asyncio.to_thread(adb.forward_remove, self.adb_path, self._local_port, serial=self.serial)
 
         if self.server_process is not None:
             self.server_process.terminate()
             try:
-                self.server_process.wait(timeout=3)
+                await asyncio.to_thread(self.server_process.wait, timeout=3)
             except subprocess.TimeoutExpired:
                 self.server_process.kill()

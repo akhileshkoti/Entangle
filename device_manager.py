@@ -121,7 +121,7 @@ class DeviceManager:
     async def poll_forever(self) -> None:
         while True:
             try:
-                current = adb.devices(self.adb_path)
+                current = await asyncio.to_thread(adb.devices, self.adb_path)
             except Exception:
                 log.exception("adb devices poll failed")
                 current = {}
