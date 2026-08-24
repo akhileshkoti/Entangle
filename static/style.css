@@ -35,14 +35,6 @@ html, body {
   cursor: pointer;
 }
 
-#start-btn {
-  position: absolute;
-  padding: 12px 24px;
-  font-size: 16px;
-  cursor: pointer;
-  display: none;
-}
-
 #focus-catcher {
   position: fixed;
   top: -100px;

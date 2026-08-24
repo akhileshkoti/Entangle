@@ -1,6 +1,5 @@
 const video = document.getElementById('video');
 const statusEl = document.getElementById('status');
-const startBtn = document.getElementById('start-btn');
 const focusCatcher = document.getElementById('focus-catcher');
 
 let jmuxer = null;
@@ -66,19 +65,10 @@ function connect() {
   ws.onerror = () => ws.close();
 }
 
-startBtn.addEventListener('click', () => {
-  startBtn.style.display = 'none';
-  video.play().catch(() => {});
-});
-
-video.addEventListener('play', () => {
-  startBtn.style.display = 'none';
-});
-
+// Browsers can pause the stream on stalls/backgrounding even with autoplay;
+// keep it always playing instead of surfacing a manual play button.
 video.addEventListener('pause', () => {
-  if (video.readyState > 0) {
-    startBtn.style.display = 'block';
-  }
+  video.play().catch(() => {});
 });
 
 // --- Pointer input: mouse/touch/pen unified via Pointer Events ---
