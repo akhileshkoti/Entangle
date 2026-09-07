@@ -4,6 +4,21 @@
 <meta charset="utf-8">
 <title>Entangle - Devices</title>
 <link rel="stylesheet" href="/static/style.css">
+<script>
+// Backward-compat with ws-scrcpy-style links, e.g.:
+// http://host:8000/#!action=stream&udid=<serial>&player=mse&ws=...
+// Only the udid is meaningful here -- the rest is ws-scrcpy's own
+// proxy-adb wiring, which Entangle doesn't need.
+(function () {
+  var hash = location.hash;
+  if (hash.indexOf('#!') !== 0) return;
+  var params = new URLSearchParams(hash.slice(2));
+  var udid = params.get('udid');
+  if (params.get('action') === 'stream' && udid) {
+    location.replace('/d/' + encodeURIComponent(udid) + '/');
+  }
+})();
+</script>
 </head>
 <body class="devices-page">
 <h1>Devices</h1>
