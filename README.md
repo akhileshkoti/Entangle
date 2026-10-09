@@ -122,8 +122,8 @@ so `ws_server.py` relays each viewer's WebSocket to the machine's VNC port
 byte-for-byte (what `websockify` normally does) -- no extra process or
 dependency.
 
-**Add machines** by copying `vnc_hosts.example.json` to `vnc_hosts.json`
-(git-ignored) and editing it:
+**Add machines** to `vnc_hosts.json` (ships as an empty list; see
+`vnc_hosts.example.json`):
 ```json
 [
   {"name": "dev-laptop", "host": "192.168.1.42", "port": 5900},

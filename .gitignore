@@ -12,6 +12,3 @@ logs/
 
 # Claude Code local session state
 .claude/
-
-# Local VNC host list (IPs are per-network; see vnc_hosts.example.json)
-vnc_hosts.json

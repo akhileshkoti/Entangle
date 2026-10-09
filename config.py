@@ -37,5 +37,5 @@ ADB_FALLBACK_PATHS = (
 )
 
 # Laptops/desktops with a VNC server to view in the browser (via noVNC).
-# Not committed -- copy vnc_hosts.example.json to vnc_hosts.json and edit.
+# Ships as an empty list -- add entries (see vnc_hosts.example.json).
 VNC_HOSTS_FILE = ROOT_DIR / "vnc_hosts.json"
