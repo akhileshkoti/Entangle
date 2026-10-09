@@ -39,3 +39,9 @@ ADB_FALLBACK_PATHS = (
 # Laptops/desktops with a VNC server to view in the browser (via noVNC).
 # Ships as an empty list -- add entries (see vnc_hosts.example.json).
 VNC_HOSTS_FILE = ROOT_DIR / "vnc_hosts.json"
+
+# Lets the devices page's "Open remote device" button (and /vnc/?host=...
+# links) reach VNC servers not listed in VNC_HOSTS_FILE. The relay still
+# only ever talks to things that greet it as a VNC server, but set this
+# False to restrict Entangle to the listed hosts only.
+VNC_ALLOW_DIRECT_HOSTS = True

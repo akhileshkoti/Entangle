@@ -135,6 +135,28 @@ restart needed. Each entry appears under "Laptops (VNC)" at `/` (reachability
 re-checked every 10s) and opens at `/vnc/<name>/`, which asks for the VNC
 password if the server wants one.
 
+**Any other machine, by IP:** the "+ Open remote device" button under
+Laptops (VNC) asks for IP/hostname, port, an optional device name, and
+username/password, then opens the viewer -- no `vnc_hosts.json` entry
+needed. The same thing as a link:
+`/vnc/?host=192.168.1.42&port=5900&devicename=Lab%20MacBook` (`port`
+defaults to 5900; `devicename` labels the page, and also works on
+`/vnc/<name>/` pages). The button hands credentials to the viewer through
+`sessionStorage` rather than the URL, so they stay out of browser history.
+Since the browser picks the host here, the relay only forwards anything
+once the target has greeted it as a VNC server (`RFB xxx.yyy`) -- it can't
+be used to reach other services on the network. Set
+`config.VNC_ALLOW_DIRECT_HOSTS = False` to allow only listed hosts.
+
+**Auto-login:** append credentials to skip the sign-in form, e.g.
+`/vnc/macbook/?username=lanforge&password=secret` or
+`/vnc/?host=192.168.1.42&username=lanforge&password=secret` (`username` is
+only needed for macOS). The page removes them from the address bar on load,
+sends no `Referer`, and `ws_server.py` logs `password=***` -- but the
+browser's history still keeps the URL as opened, and anyone you share the
+link with has the password. Missing or wrong credentials fall back to the
+form.
+
 **On each machine:**
 - The VNC server must accept connections from the machine running
   Entangle: allow its port through the firewall, and make sure it isn't
@@ -177,7 +199,9 @@ its own device picker instead of using `/`.
 
 VNC hosts: `ws://<host>:8000/vnc/<name>/ws` is a raw RFB byte stream to
 that machine's VNC server (one TCP connection per WS client) -- point any
-noVNC `RFB` instance at it. `GET /api/vnc` lists them
+noVNC `RFB` instance at it; `ws://<host>:8000/vnc/ws?host=<ip>&port=<port>`
+does the same for any VNC server not in the list (see above). `GET /api/vnc`
+lists the configured ones
 (`[{name, host, port, reachable, viewers}, ...]`).
 
 ## Layout

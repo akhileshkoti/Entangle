@@ -1,3 +1,5 @@
+import { PENDING_CREDENTIALS_KEY } from '/static/vnc_shared.js';
+
 const vncListEl = document.getElementById('vnc-list');
 
 async function loadVncHosts() {
@@ -39,3 +41,35 @@ async function loadVncHosts() {
 
 loadVncHosts();
 setInterval(loadVncHosts, 3000);
+
+// "Open remote device": any VNC server by IP, not just vnc_hosts.json.
+// Host/port/name go in the viewer URL (so a reload or bookmark still
+// works); credentials go through sessionStorage, to stay out of the URL
+// and browser history.
+const dialog = document.getElementById('open-remote-dialog');
+const form = document.getElementById('open-remote-form');
+
+document.getElementById('open-remote-btn').addEventListener('click', () => {
+  dialog.showModal();
+  form.elements.host.focus();
+});
+document.getElementById('open-remote-cancel').addEventListener('click', () => dialog.close());
+
+form.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const f = form.elements;
+  const query = new URLSearchParams({ host: f.host.value.trim() });
+  if (f.port.value && f.port.value !== '5900') query.set('port', f.port.value);
+  if (f.devicename.value.trim()) query.set('devicename', f.devicename.value.trim());
+
+  const credentials = {};
+  if (f.username.value) credentials.username = f.username.value;
+  if (f.password.value) credentials.password = f.password.value;
+  if (Object.keys(credentials).length) {
+    try {
+      sessionStorage.setItem(PENDING_CREDENTIALS_KEY, JSON.stringify(credentials));
+    } catch { /* storage blocked: the viewer will ask instead */ }
+  }
+  f.password.value = '';
+  location.href = `/vnc/?${query}`;
+});

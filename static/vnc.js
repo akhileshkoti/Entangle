@@ -2,6 +2,7 @@
 // before noVNC needs it for the macOS login.
 import '/static/subtle_aes_fallback.js';
 import RFB from '/static/vendor/novnc/core/rfb.js';
+import { PENDING_CREDENTIALS_KEY } from '/static/vnc_shared.js';
 
 const statusEl = document.getElementById('status');
 const screenEl = document.getElementById('vnc-screen');
@@ -12,11 +13,51 @@ const loginTitle = document.getElementById('vnc-login-title');
 const usernameInput = document.getElementById('vnc-username');
 const passwordInput = document.getElementById('vnc-password');
 
-// URL is /vnc/<name>/ -- the relay sits right next to it at /vnc/<name>/ws.
-const name = decodeURIComponent(location.pathname.split('/')[2]);
-const wsUrl = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/vnc/${encodeURIComponent(name)}/ws`;
+// Two URL shapes:
+//   /vnc/<name>/          a host from vnc_hosts.json; relay at /vnc/<name>/ws
+//   /vnc/?host=<ip>&port= any VNC server (devices page's "Open remote
+//                         device"); relay at /vnc/ws?host=...&port=...
+// Either can add ?devicename=... to label the page (else the configured name
+// or the host), and ?username=...&password=... to sign in automatically.
+const params = new URLSearchParams(location.search);
+const pathName = decodeURIComponent(location.pathname.split('/')[2] || '');
+const wsBase = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`;
+let wsUrl;
+if (pathName) {
+  wsUrl = `${wsBase}/vnc/${encodeURIComponent(pathName)}/ws`;
+} else {
+  const target = new URLSearchParams({ host: params.get('host') || '' });
+  if (params.get('port')) target.set('port', params.get('port'));
+  wsUrl = `${wsBase}/vnc/ws?${target}`;
+}
+const deviceName = params.get('devicename');
+const name = deviceName || pathName || params.get('host');
+document.title = `Entangle - ${name}`;
 
 let rfb = null;
+
+// Credentials, if given, come from the URL (username only matters for
+// macOS) or, from the devices page's form, via sessionStorage -- which keeps
+// them out of browser history. URL ones are taken out of the address bar
+// right away so they aren't left on screen or in a bookmark; the browser's
+// history still records the URL as it was opened, though.
+let urlCredentials = null;
+try {
+  const handedOver = sessionStorage.getItem(PENDING_CREDENTIALS_KEY);
+  if (handedOver) {
+    sessionStorage.removeItem(PENDING_CREDENTIALS_KEY);
+    urlCredentials = JSON.parse(handedOver);
+  }
+} catch { /* storage blocked: fall back to the form */ }
+if (params.has('username') || params.has('password')) {
+  urlCredentials = urlCredentials || {};
+  if (params.has('username')) urlCredentials.username = params.get('username');
+  if (params.has('password')) urlCredentials.password = params.get('password');
+  params.delete('username');
+  params.delete('password');
+  const query = params.toString();
+  history.replaceState(null, '', location.pathname + (query ? `?${query}` : '') + location.hash);
+}
 
 function setStatus(text, isError = false) {
   statusEl.textContent = text;
@@ -27,7 +68,7 @@ function connect() {
   reconnectBtn.hidden = true;
   setStatus(`Connecting to ${name}...`);
 
-  rfb = new RFB(screenEl, wsUrl, { shared: true });
+  rfb = new RFB(screenEl, wsUrl, { shared: true, credentials: urlCredentials || {} });
   rfb.scaleViewport = true;
   rfb.background = '#111';
 
@@ -39,6 +80,7 @@ function connect() {
   });
 
   rfb.addEventListener('desktopname', (e) => {
+    if (deviceName) return;  // explicitly named: keep that
     document.title = `Entangle - ${e.detail.name}`;
     setStatus(e.detail.name);
   });
@@ -46,6 +88,10 @@ function connect() {
   rfb.addEventListener('credentialsrequired', (e) => {
     const types = e.detail.types;
     usernameInput.hidden = !types.includes('username');
+    // URL gave only some of what's needed (e.g. password without username).
+    if (urlCredentials && urlCredentials.username && !usernameInput.value) {
+      usernameInput.value = urlCredentials.username;
+    }
     loginTitle.textContent = `Sign in to ${name}`;
     loginForm.hidden = false;
     setStatus('Waiting for credentials...');
@@ -53,6 +99,8 @@ function connect() {
   });
 
   rfb.addEventListener('securityfailure', (e) => {
+    // Wrong URL credentials: don't retry them on Reconnect, ask instead.
+    urlCredentials = null;
     const reason = e.detail.reason ? `: ${e.detail.reason}` : '';
     setStatus(`Authentication failed${reason}`, true);
   });
