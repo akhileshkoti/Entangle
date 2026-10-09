@@ -113,6 +113,44 @@ every adb call in `scrcpy_common/adb.py` takes an optional `serial` and
 passes `-s <serial>` through -- `DeviceSession` always sets this from
 whichever device it was constructed for.
 
+## Laptops / desktops over VNC
+
+The same device list also shows any machines running a VNC server, viewed
+and controlled in the browser with [noVNC](https://github.com/novnc/noVNC)
+(vendored in `static/vendor/novnc/`, MPL-2.0). Browsers can't open raw TCP,
+so `ws_server.py` relays each viewer's WebSocket to the machine's VNC port
+byte-for-byte (what `websockify` normally does) -- no extra process or
+dependency.
+
+**Add machines** by copying `vnc_hosts.example.json` to `vnc_hosts.json`
+(git-ignored) and editing it:
+```json
+[
+  {"name": "dev-laptop", "host": "192.168.1.42", "port": 5900},
+  {"name": "macbook", "host": "192.168.1.57"}
+]
+```
+`port` defaults to 5900. The file is re-read whenever it changes, no
+restart needed. Each entry appears under "Laptops (VNC)" at `/` (reachability
+re-checked every 10s) and opens at `/vnc/<name>/`, which asks for the VNC
+password if the server wants one.
+
+**On each machine:**
+- The VNC server must accept connections from the machine running
+  Entangle: allow its port through the firewall, and make sure it isn't
+  set to listen on localhost only.
+- Use plain **VNC password** authentication. That's the default for
+  TightVNC, TigerVNC, UltraVNC and x11vnc. macOS Screen Sharing works too
+  (it asks for your macOS username + password). RealVNC Server's default
+  login won't connect -- switch it to "VNC password" in its Options ->
+  Security.
+
+**Security:** only hosts listed in `vnc_hosts.json` can be relayed to (the
+browser never chooses the target), but since Entangle itself has no
+authentication, each machine's VNC password is its only protection --
+anyone who can reach Entangle can reach the login prompt. VNC traffic is
+also usually unencrypted. Keep it on a trusted network.
+
 ## WS transport contract
 
 Any local webapp can connect to `ws://<host>:8000/d/<serial>/ws` for a
@@ -135,6 +173,11 @@ device share that device's one upstream connection):
 (`[{serial, model, connected, viewers}, ...]`) if a webapp wants to build
 its own device picker instead of using `/`.
 
+VNC hosts: `ws://<host>:8000/vnc/<name>/ws` is a raw RFB byte stream to
+that machine's VNC server (one TCP connection per WS client) -- point any
+noVNC `RFB` instance at it. `GET /api/vnc` lists them
+(`[{name, host, port, reachable, viewers}, ...]`).
+
 ## Layout
 
 - `scrcpy_common/` -- adb wrapper (serial-aware), server launcher, wire
@@ -143,11 +186,15 @@ its own device picker instead of using `/`.
 - `device_manager.py` -- discovers attached devices; one `DeviceHub` per
   device, lazily starting/stopping its `DeviceSession` based on viewer
   count and fanning video out to that device's connected WS clients.
-- `ws_server.py` -- the persistent process: owns the `DeviceManager`,
-  routes HTTP/WS per device, forwards control input.
+- `vnc_manager.py` -- loads `vnc_hosts.json` and tracks which VNC hosts
+  are reachable.
+- `ws_server.py` -- the persistent process: owns the `DeviceManager` and
+  `VncManager`, routes HTTP/WS per device, forwards control input, relays
+  VNC WebSockets to TCP.
 - `static/` -- the browser client: `index.html`/`devices.js` (device
   list), `device.html`/`app.js` (viewer: video via MSE/jmuxer, input via
-  Pointer/Keyboard/Wheel events -> control messages).
+  Pointer/Keyboard/Wheel events -> control messages), `vnc_hosts.js` (VNC
+  host list), `vnc.html`/`vnc.js` (VNC viewer, via noVNC).
 - `dump_video_cli.py`, `control_test_cli.py` -- standalone diagnostic
   scripts (`--serial`/positional arg to target a device) used while
   building this out; not part of the running system.

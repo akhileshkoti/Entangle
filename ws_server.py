@@ -9,6 +9,7 @@ from aiohttp import WSMsgType, web
 
 import config
 from device_manager import DeviceManager
+from vnc_manager import CONNECT_TIMEOUT_SECONDS as VNC_CONNECT_TIMEOUT_SECONDS, VncManager
 
 ROOT_DIR = Path(__file__).resolve().parent
 STATIC_DIR = ROOT_DIR / "static"
@@ -28,6 +29,7 @@ logging.basicConfig(
 log = logging.getLogger("ws_server")
 
 device_manager = DeviceManager()
+vnc_manager = VncManager(config.VNC_HOSTS_FILE)
 
 
 async def devices_page(request: web.Request) -> web.FileResponse:
@@ -86,8 +88,72 @@ async def device_ws_handler(request: web.Request) -> web.WebSocketResponse:
     return ws
 
 
+async def api_vnc(request: web.Request) -> web.Response:
+    return web.json_response(vnc_manager.list_hosts())
+
+
+async def vnc_page(request: web.Request) -> web.StreamResponse:
+    name = request.match_info["name"]
+    if vnc_manager.get_host(name) is None:
+        raise web.HTTPNotFound(text=f"Unknown VNC host: {name}")
+    return web.FileResponse(STATIC_DIR / "vnc.html")
+
+
+async def vnc_ws_handler(request: web.Request) -> web.WebSocketResponse:
+    """Plain byte relay between noVNC (RFB over WebSocket) and the host's
+    VNC server (RFB over TCP) -- what websockify does, minus the extra
+    process. One TCP connection per browser client; nothing is parsed."""
+    name = request.match_info["name"]
+    host = vnc_manager.get_host(name)
+    if host is None:
+        raise web.HTTPNotFound(text=f"Unknown VNC host: {name}")
+
+    ws = web.WebSocketResponse()
+    await ws.prepare(request)
+
+    try:
+        reader, writer = await asyncio.wait_for(
+            asyncio.open_connection(host.host, host.port), VNC_CONNECT_TIMEOUT_SECONDS
+        )
+    except (OSError, asyncio.TimeoutError) as e:
+        log.warning("[vnc:%s] connect to %s:%d failed: %s", name, host.host, host.port, e)
+        await ws.close(code=1011, message=b"VNC server unreachable")
+        return ws
+
+    host.viewers += 1
+    host.reachable = True
+    log.info("[vnc:%s] client connected (total=%d)", name, host.viewers)
+
+    async def tcp_to_ws() -> None:
+        try:
+            while data := await reader.read(65536):
+                await ws.send_bytes(data)
+        except (ConnectionError, OSError) as e:
+            log.info("[vnc:%s] VNC server connection lost: %s", name, e)
+        # VNC server hung up (or failed): end the browser side too, which
+        # also ends the receive loop below.
+        await ws.close()
+
+    pump_task = asyncio.create_task(tcp_to_ws())
+    try:
+        async for msg in ws:
+            if msg.type == WSMsgType.BINARY:
+                writer.write(msg.data)
+                await writer.drain()
+    except (ConnectionError, OSError) as e:
+        log.info("[vnc:%s] VNC server connection lost: %s", name, e)
+    finally:
+        pump_task.cancel()
+        writer.close()
+        host.viewers -= 1
+        log.info("[vnc:%s] client disconnected (total=%d)", name, host.viewers)
+
+    return ws
+
+
 async def on_startup(app: web.Application) -> None:
     app["discovery_task"] = asyncio.create_task(device_manager.poll_forever())
+    app["vnc_poll_task"] = asyncio.create_task(vnc_manager.poll_forever())
 
 
 def create_app() -> web.Application:
@@ -96,6 +162,9 @@ def create_app() -> web.Application:
     app.router.add_get("/api/devices", api_devices)
     app.router.add_get("/d/{serial}/", device_page)
     app.router.add_get("/d/{serial}/ws", device_ws_handler)
+    app.router.add_get("/api/vnc", api_vnc)
+    app.router.add_get("/vnc/{name}/", vnc_page)
+    app.router.add_get("/vnc/{name}/ws", vnc_ws_handler)
     app.router.add_static("/static/", STATIC_DIR)
     app.on_startup.append(on_startup)
     return app

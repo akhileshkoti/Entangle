@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Entangle - VNC</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div id="status">Connecting...</div>
+<div id="vnc-toolbar">
+  <button id="cad-btn" type="button" disabled>Ctrl+Alt+Del</button>
+  <button id="reconnect-btn" type="button" hidden>Reconnect</button>
+  <a id="vnc-back-link" href="/">&larr; Devices</a>
+</div>
+<div id="vnc-screen"></div>
+<form id="vnc-login" hidden>
+  <h2 id="vnc-login-title">Sign in</h2>
+  <input id="vnc-username" type="text" placeholder="Username" autocomplete="username" hidden>
+  <input id="vnc-password" type="password" placeholder="VNC password" autocomplete="current-password">
+  <button type="submit">Connect</button>
+</form>
+<script type="module" src="/static/vnc.js"></script>
+</body>
+</html>

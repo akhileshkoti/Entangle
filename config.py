@@ -35,3 +35,7 @@ ADB_FALLBACK_PATHS = (
     Path.home() / "Android" / "Sdk" / "platform-tools" / "adb",
     Path.home() / "Library" / "Android" / "sdk" / "platform-tools" / "adb",
 )
+
+# Laptops/desktops with a VNC server to view in the browser (via noVNC).
+# Not committed -- copy vnc_hosts.example.json to vnc_hosts.json and edit.
+VNC_HOSTS_FILE = ROOT_DIR / "vnc_hosts.json"
