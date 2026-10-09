@@ -138,24 +138,61 @@ password if the server wants one.
 **Any other machine, by IP:** the "+ Open remote device" button under
 Laptops (VNC) asks for IP/hostname, port, an optional device name, and
 username/password, then opens the viewer -- no `vnc_hosts.json` entry
-needed. The same thing as a link:
-`/vnc/?host=192.168.1.42&port=5900&devicename=Lab%20MacBook` (`port`
-defaults to 5900; `devicename` labels the page, and also works on
-`/vnc/<name>/` pages). The button hands credentials to the viewer through
-`sessionStorage` rather than the URL, so they stay out of browser history.
-Since the browser picks the host here, the relay only forwards anything
-once the target has greeted it as a VNC server (`RFB xxx.yyy`) -- it can't
-be used to reach other services on the network. Set
-`config.VNC_ALLOW_DIRECT_HOSTS = False` to allow only listed hosts.
+needed. It hands credentials to the viewer through `sessionStorage` rather
+than the URL, so they stay out of browser history. To do the same from a
+link, script or another app, use the URL API below. Since the browser picks
+the host here, the relay only forwards anything once the target has greeted
+it as a VNC server (`RFB xxx.yyy`) -- it can't be used to reach other
+services on the network. Set `config.VNC_ALLOW_DIRECT_HOSTS = False` to
+allow only listed hosts.
 
-**Auto-login:** append credentials to skip the sign-in form, e.g.
-`/vnc/macbook/?username=lanforge&password=secret` or
-`/vnc/?host=192.168.1.42&username=lanforge&password=secret` (`username` is
-only needed for macOS). The page removes them from the address bar on load,
-sends no `Referer`, and `ws_server.py` logs `password=***` -- but the
-browser's history still keeps the URL as opened, and anyone you share the
-link with has the password. Missing or wrong credentials fall back to the
-form.
+### VNC viewer URL API
+
+Open these in a browser (or link to them) to get straight to a machine's
+screen. Two forms:
+
+| URL | Opens |
+| --- | --- |
+| `http://<entangle>:<port>/vnc/?host=<ip>` | Any VNC server, by IP or hostname |
+| `http://<entangle>:<port>/vnc/<name>/` | A machine listed in `vnc_hosts.json` |
+
+Query parameters (all optional except `host` on the first form):
+
+| Parameter | Meaning |
+| --- | --- |
+| `host` | IP address or hostname of the VNC server (`/vnc/?host=...` form only) |
+| `port` | VNC port, default `5900` (`/vnc/?host=...` form only) |
+| `devicename` | Name shown as the page title and status label. Defaults to the `vnc_hosts.json` name, or the host |
+| `username` | Login username -- only macOS Screen Sharing asks for one (the Mac account's username) |
+| `password` | VNC password, or the macOS account password |
+
+With `username`/`password` (as needed) the viewer signs in on its own;
+without them, or if they're wrong, it shows the sign-in form instead.
+Values must be URL-encoded (space -> `%20`, `&` -> `%26`, `#` -> `%23`,
+`+` -> `%2B`).
+
+Examples (Entangle running at `192.168.245.117:1201`):
+```
+# Mac by IP, signed in automatically, labelled "Lab MacBook"
+http://192.168.245.117:1201/vnc/?host=192.168.244.128&devicename=Lab%20MacBook&username=lanforge&password=lanforge
+
+# Windows/Linux VNC server on a non-default port (VNC password only, no username)
+http://192.168.245.117:1201/vnc/?host=192.168.240.210&port=5901&devicename=HPtesting&password=secret
+
+# Machine from vnc_hosts.json, relabelled, signed in automatically
+http://192.168.245.117:1201/vnc/Macs-MacBook-Air/?devicename=Lab%20MacBook&username=lanforge&password=lanforge
+```
+
+What happens to the credentials: the page removes `username`/`password`
+from the address bar as soon as it loads (other parameters stay, so a
+reload still reaches the same machine, and asks to sign in again), sends no
+`Referer`, and `ws_server.py` logs `password=***`. The browser's history
+still keeps the URL exactly as it was opened, though, and anyone you share
+such a link with has the password.
+
+Errors: a missing/invalid `host` or `port` returns HTTP 400; an unknown
+`<name>` returns 404; with `config.VNC_ALLOW_DIRECT_HOSTS = False` the
+`/vnc/?host=...` form returns 403.
 
 **On each machine:**
 - The VNC server must accept connections from the machine running
@@ -169,8 +206,9 @@ form.
   login won't connect -- switch it to "VNC password" in its Options ->
   Security.
 
-**Security:** only hosts listed in `vnc_hosts.json` can be relayed to (the
-browser never chooses the target), but since Entangle itself has no
+**Security:** the relay only ever connects to hosts listed in
+`vnc_hosts.json` or -- unless `config.VNC_ALLOW_DIRECT_HOSTS = False` --
+ones given by IP that answer as VNC servers. Since Entangle itself has no
 authentication, each machine's VNC password is its only protection --
 anyone who can reach Entangle can reach the login prompt. VNC traffic is
 also usually unencrypted. Keep it on a trusted network.
