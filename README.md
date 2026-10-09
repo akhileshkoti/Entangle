@@ -141,7 +141,9 @@ password if the server wants one.
   set to listen on localhost only.
 - Use plain **VNC password** authentication. That's the default for
   TightVNC, TigerVNC, UltraVNC and x11vnc. macOS Screen Sharing works too
-  (it asks for your macOS username + password). RealVNC Server's default
+  (it asks for your macOS username + password; the AES that login needs is
+  normally HTTPS-only in browsers, so `static/subtle_aes_fallback.js`
+  supplies it when Entangle is opened over plain `http://<lan-ip>`). RealVNC Server's default
   login won't connect -- switch it to "VNC password" in its Options ->
   Security.
 

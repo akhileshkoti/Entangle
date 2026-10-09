@@ -1,3 +1,6 @@
+// Must come first: fills in crypto.subtle (AES only) on plain-http pages,
+// before noVNC needs it for the macOS login.
+import '/static/subtle_aes_fallback.js';
 import RFB from '/static/vendor/novnc/core/rfb.js';
 
 const statusEl = document.getElementById('status');
@@ -58,8 +61,8 @@ function connect() {
     cadBtn.disabled = true;
     loginForm.hidden = true;
     reconnectBtn.hidden = false;
-    // A securityfailure already set a more specific message.
-    if (!statusEl.textContent.startsWith('Authentication failed')) {
+    // A securityfailure or showFatal() already set a more specific message.
+    if (!/^(Authentication failed|Error:)/.test(statusEl.textContent)) {
       setStatus(e.detail.clean ? 'Disconnected' : `Can't reach VNC server on ${name}`, true);
     }
     rfb = null;
@@ -85,5 +88,18 @@ cadBtn.addEventListener('click', () => {
 });
 
 reconnectBtn.addEventListener('click', connect);
+
+// noVNC's async auth steps don't route failures to a 'disconnect' event,
+// so without this a crash there just leaves the page on "Authenticating...".
+function showFatal(err) {
+  const message = (err && err.message) || String(err);
+  setStatus(`Error: ${message}`, true);
+  reconnectBtn.hidden = false;
+  if (rfb) {
+    try { rfb.disconnect(); } catch { /* already torn down */ }
+  }
+}
+window.addEventListener('unhandledrejection', (e) => showFatal(e.reason));
+window.addEventListener('error', (e) => showFatal(e.error || e.message));
 
 connect();
